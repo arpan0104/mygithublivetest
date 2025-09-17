@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple Portfolio Builder — Single File (Login → Build → Review → Download)</title>
+  <!--
+    🎯 GOAL
+    A single-file, responsive Portfolio Builder made with only HTML, CSS, and JavaScript.
+    Flow: Login → Fill Details → Review Preview → Download a ready-to-share portfolio.html
+
+    💡 HOW TO USE
+    1) Enter demo credentials (Email: demo@user.com  |  Password: 1234) or anything if you disable strict login below.
+    2) Fill your details across tabs (Profile, Skills, Projects, Education, Theme).
+    3) Click "Review" to see your portfolio preview.
+    4) Click "Download Portfolio" to get a standalone HTML file.
+
+    🛠️ TWEAKS YOU CAN MAKE
+    - To skip strict login, set STRICT_LOGIN = false in the script.
+    - Change THEME defaults under :root and in the Theme tab.
+    - The generated file is fully offline and responsive.
+
+    📂 Single-file means no external libraries. Everything is vanilla & commented for clarity.
+  -->
+  <style>
+    :root{
+      --bg: #0b1220;
+      --card: #111a2b;
+      --muted: #9fb0d0;
+      --text: #e6edf7;
+      --brand: #6aa9ff;
+      --brand-2: #8b5cf6;
+      --ring: rgba(106,169,255,0.35);
+      --success: #10b981;
+      --danger: #ef4444;
+      --radius: 16px;
+      --pad: 14px;
+      --gap: 14px;
+      --shadow: 0 10px 25px rgba(0,0,0,0.25);
+      --maxw: 1100px;
+    }
+
+    *{box-sizing: border-box}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
+
+    /* App Shell */
+    .wrap{min-height:100%;display:flex;flex-direction:column}
+    header{position:sticky;top:0;background:rgba(11,18,32,0.8);backdrop-filter:saturate(1.2) blur(10px);border-bottom:1px solid #1e2a42;z-index:10}
+    .bar{max-width:var(--maxw);margin:auto;padding:12px 16px;display:flex;align-items:center;gap:12px}
+    .logo{display:flex;align-items:center;gap:10px;font-weight:700}
+    .dot{width:10px;height:10px;border-radius:999px;background: linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 0 0 6px rgba(106,169,255,.15)}
+    .grow{flex:1}
+    .btn,.tab{border:1px solid #24314f;background:#0e1728;color:var(--text);padding:10px 14px;border-radius:999px;cursor:pointer}
+    .btn:hover,.tab:hover{border-color:#2f3e61}
+    .btn.brand{background: linear-gradient(135deg, var(--brand), var(--brand-2));border:none;color:white}
+    .btn.ghost{background:transparent}
+    .btn.min{padding:8px 12px;font-size:14px}
+
+    main{max-width:var(--maxw);margin:18px auto;padding:0 16px;display:grid;gap:18px}
+
+    /* Cards / Panels */
+    .card{background:var(--card);border:1px solid #1b2740;border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card h2{margin:0 0 6px 0}
+    .card .head{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #1b2740}
+    .card .body{padding:16px}
+
+    /* Tabs */
+    .tabs{display:flex;flex-wrap:wrap;gap:10px}
+    .tab{user-select:none}
+    .tab.active{background:#1a2540}
+
+    /* Forms */
+    .grid{display:grid;gap:var(--gap)}
+    .g2{grid-template-columns:repeat(2,1fr)}
+    .g3{grid-template-columns:repeat(3,1fr)}
+    @media (max-width: 800px){.g2,.g3{grid-template-columns:1fr}}
+
+    label{font-size:13px;color:var(--muted)}
+    input, textarea, select {
+      width:100%;padding:12px;border-radius:12px;border:1px solid #24314f;background:#0e1728;color:var(--text);
+      outline:none;transition:.2s;border-left-width:2px
+    }
+    input:focus, textarea:focus, select:focus{box-shadow:0 0 0 6px var(--ring);border-color:var(--brand)}
+    textarea{min-height:110px;resize:vertical}
+
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px dashed #2a3a5c;border-radius:999px;color:var(--muted)}
+    .hint{font-size:12px;color:var(--muted)}
+
+    /* Layout: Builder + Live Preview */
+    .two{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+    @media (max-width: 1020px){.two{grid-template-columns:1fr}}
+
+    /* Login */
+    .login{max-width:520px;margin:10vh auto;padding:26px}
+    .login .brand{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .login h1{margin:8px 0 4px}
+
+    /* Preview card */
+    .preview{position:sticky;top:74px}
+
+    /* Footer */
+    footer{opacity:.8}
+
+    /* Mini portfolio style inside preview (separate from generated file) */
+    .port{
+      --pbg:#0b0f1a;--pcard:#0f1625;--ptext:#e8edfa;--phint:#a0b2d8;--pbrand: var(--brand);
+      background:var(--pbg);border:1px solid #1b2740;border-radius:14px;overflow:hidden
+    }
+    .port .hero{padding:22px 18px;background:linear-gradient(180deg, rgba(106,169,255,.10), transparent)}
+    .port .hero .row{display:flex;gap:16px;align-items:center}
+    .port img.pfp{width:76px;height:76px;border-radius:14px;object-fit:cover;border:2px solid rgba(255,255,255,.12)}
+    .port h1{margin:0;font-size:22px}
+    .port .sub{margin:2px 0 0 0;color:var(--phint)}
+    .port .sec{padding:16px;border-top:1px solid #1a2340}
+    .tag{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid #22345c;margin:4px 6px 0 0;font-size:13px;color:#c7d6f6}
+    .proj{display:grid;gap:12px}
+    .proj .item{padding:12px;border:1px solid #22345c;border-radius:12px}
+    .p-a{display:flex;gap:10px;flex-wrap:wrap}
+
+    .divider{height:1px;background:#1b2740;margin:6px 0 14px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="bar">
+      <div class="logo"><span class="dot"></span> <span>Portfolio Builder</span></div>
+      <div class="grow"></div>
+      <button id="btnSaveDraft" class="btn min">Save Draft</button>
+      <button id="btnLoadDraft" class="btn min ghost">Load Draft</button>
+      <button id="btnReset" class="btn min ghost">Reset</button>
+      <button id="btnGoReview" class="btn brand min">Review</button>
+    </div>
+  </header>
+
+  <!-- LOGIN PANEL -->
+  <main id="panelLogin">
+    <div class="card login">
+      <div class="brand"><span class="dot"></span><span>Welcome</span></div>
+      <h1>Sign in to start</h1>
+      <p class="hint">Demo credentials — Email: <b>demo@user.com</b>, Password: <b>1234</b></p>
+      <div class="divider"></div>
+      <div class="grid g1">
+        <div>
+          <label>Email</label>
+          <input id="loginEmail" type="email" placeholder="you@example.com" />
+        </div>
+        <div>
+          <label>Password</label>
+          <input id="loginPass" type="password" placeholder="••••" />
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:6px">
+          <span class="hint">No server here — this is a local demo login.</span>
+          <button id="btnLogin" class="btn brand">Login</button>
+        </div>
+      </div>
+      <p id="loginMsg" class="hint" style="margin-top:10px"></p>
+    </div>
+  </main>
+
+  <!-- BUILDER PANEL -->
+  <main id="panelBuilder" style="display:none">
+    <div class="two">
+      <!-- Left: Form Builder -->
+      <section class="card">
+        <div class="head">
+          <div>
+            <h2>Build your portfolio</h2>
+            <div class="hint">Fill each section. Your live preview updates instantly.</div>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Sections">
+            <button class="tab active" data-tab="profile">Profile</button>
+            <button class="tab" data-tab="skills">Skills</button>
+            <button class="tab" data-tab="projects">Projects</button>
+            <button class="tab" data-tab="education">Education</button>
+            <button class="tab" data-tab="theme">Theme</button>
+          </div>
+        </div>
+        <div class="body">
+
+          <!-- PROFILE TAB -->
+          <div class="tabpane" id="tab-profile">
+            <div class="grid g2">
+              <div>
+                <label>Full Name</label>
+                <input id="name" placeholder="Arpan Petkar" />
+              </div>
+              <div>
+                <label>Title / Role</label>
+                <input id="role" placeholder="Frontend Developer" />
+              </div>
+              <div class="g2" style="grid-column:1/-1;display:grid;gap:var(--gap)">
+                <div>
+                  <label>Short Bio</label>
+                  <textarea id="about" placeholder="I build clean, responsive websites and love turning ideas into delightful UI."></textarea>
+                </div>
+                <div>
+                  <label>Profile Photo (optional)</label>
+                  <input id="photo" type="file" accept="image/*" />
+                  <div class="hint">Square images work best. Max ~2–3MB recommended.</div>
+                </div>
+              </div>
+              <div>
+                <label>Email</label>
+                <input id="email" type="email" placeholder="you@example.com" />
+              </div>
+              <div>
+                <label>Phone</label>
+                <input id="phone" placeholder="+91 98765 43210" />
+              </div>
+              <div>
+                <label>Location</label>
+                <input id="location" placeholder="Nagpur, India" />
+              </div>
+              <div>
+                <label>Website / Portfolio Link</label>
+                <input id="website" placeholder="https://your-portfolio.com" />
+              </div>
+              <div>
+                <label>GitHub</label>
+                <input id="github" placeholder="https://github.com/username" />
+              </div>
+              <div>
+                <label>LinkedIn</label>
+                <input id="linkedin" placeholder="https://linkedin.com/in/username" />
+              </div>
+            </div>
+          </div>
+
+          <!-- SKILLS TAB -->
+          <div class="tabpane" id="tab-skills" style="display:none">
+            <div class="grid g1">
+              <div>
+                <label>Skills (comma separated)</label>
+                <input id="skills" placeholder="HTML, CSS, JavaScript, React, Node.js" />
+                <div class="hint">Example: HTML, CSS, JavaScript, Git, Figma</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PROJECTS TAB -->
+          <div class="tabpane" id="tab-projects" style="display:none">
+            <div class="grid g3">
+              <!-- Project 1 -->
+              <div>
+                <label>Project 1 — Title</label>
+                <input id="p1_title" placeholder="Portfolio Builder" />
+                <label>Description</label>
+                <textarea id="p1_desc" placeholder="Single-file portfolio builder with preview & download."></textarea>
+                <label>Link</label>
+                <input id="p1_link" placeholder="https://github.com/you/project1" />
+              </div>
+              <!-- Project 2 -->
+              <div>
+                <label>Project 2 — Title</label>
+                <input id="p2_title" placeholder="E-Commerce UI" />
+                <label>Description</label>
+                <textarea id="p2_desc" placeholder="Responsive storefront with cart and filters."></textarea>
+                <label>Link</label>
+                <input id="p2_link" placeholder="https://github.com/you/project2" />
+              </div>
+              <!-- Project 3 -->
+              <div>
+                <label>Project 3 — Title</label>
+                <input id="p3_title" placeholder="Chat App" />
+                <label>Description</label>
+                <textarea id="p3_desc" placeholder="Realtime web chat with groups & DMs."></textarea>
+                <label>Link</label>
+                <input id="p3_link" placeholder="https://github.com/you/project3" />
+              </div>
+            </div>
+          </div>
+
+          <!-- EDUCATION TAB -->
+          <div class="tabpane" id="tab-education" style="display:none">
+            <div class="grid g2">
+              <div>
+                <label>Degree</label>
+                <input id="edu_degree" placeholder="BCA" />
+              </div>
+              <div>
+                <label>Institute</label>
+                <input id="edu_inst" placeholder="Your College" />
+              </div>
+              <div>
+                <label>Year</label>
+                <input id="edu_year" placeholder="2025" />
+              </div>
+              <div>
+                <label>Highlights</label>
+                <input id="edu_high" placeholder="Top 5%, Web Dev Club" />
+              </div>
+            </div>
+          </div>
+
+          <!-- THEME TAB -->
+          <div class="tabpane" id="tab-theme" style="display:none">
+            <div class="grid g3">
+              <div>
+                <label>Primary Brand</label>
+                <input id="theme_brand" type="color" value="#6aa9ff" />
+              </div>
+              <div>
+                <label>Accent</label>
+                <input id="theme_accent" type="color" value="#8b5cf6" />
+              </div>
+              <div>
+                <label>Card Background</label>
+                <input id="theme_card" type="color" value="#111a2b" />
+              </div>
+              <div>
+                <label>Text Color</label>
+                <input id="theme_text" type="color" value="#e6edf7" />
+              </div>
+              <div>
+                <label>Muted Text</label>
+                <input id="theme_muted" type="color" value="#9fb0d0" />
+              </div>
+              <div>
+                <label>Background</label>
+                <input id="theme_bg" type="color" value="#0b1220" />
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Right: Live Preview & Actions -->
+      <aside class="card preview">
+        <div class="head">
+          <div>
+            <h2>Live Preview</h2>
+            <div class="hint">This is how your portfolio looks.</div>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button id="btnDownload" class="btn brand">Download Portfolio</button>
+          </div>
+        </div>
+        <div class="body">
+          <div id="preview" class="port">
+            <div class="hero">
+              <div class="row">
+                <img id="prevPhoto" class="pfp" alt="Profile" src="" style="display:none" />
+                <div>
+                  <h1 id="prevName">Your Name</h1>
+                  <div id="prevRole" class="sub">Your Role</div>
+                </div>
+              </div>
+              <p id="prevAbout" style="margin-top:12px;color:#c8d6f6">Write a short bio about yourself…</p>
+              <div class="p-a" id="prevLinks"></div>
+            </div>
+            <div class="sec">
+              <strong>Skills</strong>
+              <div id="prevSkills" style="margin-top:6px"></div>
+            </div>
+            <div class="sec">
+              <strong>Projects</strong>
+              <div id="prevProjects" class="proj" style="margin-top:6px"></div>
+            </div>
+            <div class="sec">
+              <strong>Education</strong>
+              <div id="prevEdu" style="margin-top:6px"></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="bar" style="justify-content:center;opacity:.7">
+    <small>Made with ❤ — Single-file Vanilla (HTML/CSS/JS). No tracking, all local.</small>
+  </footer>
+</div>
+
+<script>
+  // ===== SETTINGS =====
+  const STRICT_LOGIN = false; // set to false to allow any email/password
+  const DEMO_EMAIL = 'demo@user.com';
+  const DEMO_PASS = '1234';
+
+  // ===== STATE =====
+  const state = {
+    profile: {
+      name: '', role: '', about: '', email: '', phone: '', location: '', website: '', github: '', linkedin: '', photoDataUrl: ''
+    },
+    skills: [],
+    projects: [
+      { title: '', desc: '', link: '' },
+      { title: '', desc: '', link: '' },
+      { title: '', desc: '', link: '' },
+    ],
+    education: { degree:'', inst:'', year:'', high:'' },
+    theme: { brand:'#6aa9ff', accent:'#8b5cf6', card:'#111a2b', text:'#e6edf7', muted:'#9fb0d0', bg:'#0b1220' }
+  };
+
+  // ===== SHORTCUTS =====
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+
+  // ===== PANELS =====
+  const panelLogin = $('#panelLogin');
+  const panelBuilder = $('#panelBuilder');
+
+  // ===== LOGIN =====
+  $('#btnLogin').addEventListener('click', ()=>{
+    const email = $('#loginEmail').value.trim();
+    const pass = $('#loginPass').value.trim();
+    const msg = $('#loginMsg');
+
+    if(!STRICT_LOGIN || (email === DEMO_EMAIL && pass === DEMO_PASS)){
+      msg.textContent = 'Login successful!';
+      msg.style.color = 'var(--success)';
+      panelLogin.style.display = 'none';
+      panelBuilder.style.display = '';
+      return;
+    }
+    msg.textContent = 'Invalid credentials. Use demo@user.com / 1234';
+    msg.style.color = 'var(--danger)';
+  });
+
+  // ===== TABS =====
+  const panes = {
+    profile: $('#tab-profile'),
+    skills: $('#tab-skills'),
+    projects: $('#tab-projects'),
+    education: $('#tab-education'),
+    theme: $('#tab-theme')
+  };
+  $$('.tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      $$('.tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      Object.values(panes).forEach(p=>p.style.display='none');
+      panes[btn.dataset.tab].style.display='';
+    });
+  });
+
+  // ===== FORM BINDINGS → STATE → PREVIEW =====
+  const bind = (selector, path, transform = v=>v) => {
+    const el = $(selector);
+    const set = () => {
+      const v = transform(el.value);
+      const parts = path.split('.');
+      let o = state;
+      for(let i=0;i<parts.length-1;i++){ o = o[parts[i]]; }
+      o[parts.at(-1)] = v;
+      render();
+    };
+    el.addEventListener('input', set);
+    return set; // return setter for initial call
+  };
+
+  // PROFILE
+  bind('#name','profile.name')();
+  bind('#role','profile.role')();
+  bind('#about','profile.about')();
+  bind('#email','profile.email')();
+  bind('#phone','profile.phone')();
+  bind('#location','profile.location')();
+  bind('#website','profile.website')();
+  bind('#github','profile.github')();
+  bind('#linkedin','profile.linkedin')();
+
+  // Photo upload → dataURL
+  $('#photo').addEventListener('change', (e)=>{
+    const file = e.target.files?.[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{ state.profile.photoDataUrl = String(reader.result||''); render(); };
+    reader.readAsDataURL(file);
+  });
+
+  // SKILLS (comma to array)
+  bind('#skills','skills', v=> v.split(',').map(s=>s.trim()).filter(Boolean))();
+
+  // PROJECTS
+  const projIds = [1,2,3];
+  projIds.forEach(i=>{
+    bind(`#p${i}_title`, `projects.${i-1}.title`)();
+    bind(`#p${i}_desc`, `projects.${i-1}.desc`)();
+    bind(`#p${i}_link`, `projects.${i-1}.link`)();
+  });
+
+  // EDUCATION
+  bind('#edu_degree','education.degree')();
+  bind('#edu_inst','education.inst')();
+  bind('#edu_year','education.year')();
+  bind('#edu_high','education.high')();
+
+  // THEME
+  const themeBind = (id,key)=>{
+    const el = $(id);
+    el.addEventListener('input', ()=>{ state.theme[key] = el.value; applyTheme(); render(); });
+  };
+  themeBind('#theme_brand','brand');
+  themeBind('#theme_accent','accent');
+  themeBind('#theme_card','card');
+  themeBind('#theme_text','text');
+  themeBind('#theme_muted','muted');
+  themeBind('#theme_bg','bg');
+
+  function applyTheme(){
+    document.documentElement.style.setProperty('--brand', state.theme.brand);
+    document.documentElement.style.setProperty('--brand-2', state.theme.accent);
+    document.documentElement.style.setProperty('--card', state.theme.card);
+    document.documentElement.style.setProperty('--text', state.theme.text);
+    document.documentElement.style.setProperty('--muted', state.theme.muted);
+    document.documentElement.style.setProperty('--bg', state.theme.bg);
+  }
+
+  // ===== PREVIEW RENDER =====
+  function render(){
+    // Profile
+    $('#prevName').textContent = state.profile.name || 'Your Name';
+    $('#prevRole').textContent = state.profile.role || 'Your Role';
+    $('#prevAbout').textContent = state.profile.about || 'Write a short bio about yourself…';
+
+    const photo = $('#prevPhoto');
+    if(state.profile.photoDataUrl){ photo.src = state.profile.photoDataUrl; photo.style.display=''; }
+    else { photo.style.display='none'; }
+
+    // Links
+    const links = [];
+    if(state.profile.email) links.push(`<a class="pill" href="mailto:${encodeURIComponent(state.profile.email)}">✉️ ${escapeHtml(state.profile.email)}</a>`);
+    if(state.profile.phone) links.push(`<span class="pill">📞 ${escapeHtml(state.profile.phone)}</span>`);
+    if(state.profile.location) links.push(`<span class="pill">📍 ${escapeHtml(state.profile.location)}</span>`);
+    if(state.profile.website) links.push(`<a class="pill" href="${safeUrl(state.profile.website)}" target="_blank">🔗 Website</a>`);
+    if(state.profile.github) links.push(`<a class="pill" href="${safeUrl(state.profile.github)}" target="_blank">🐙 GitHub</a>`);
+    if(state.profile.linkedin) links.push(`<a class="pill" href="${safeUrl(state.profile.linkedin)}" target="_blank">💼 LinkedIn</a>`);
+    $('#prevLinks').innerHTML = links.join(' ');
+
+    // Skills
+    $('#prevSkills').innerHTML = state.skills.map(s=>`<span class="tag">${escapeHtml(s)}</span>`).join('');
+
+    // Projects
+    $('#prevProjects').innerHTML = state.projects.filter(p=>p.title || p.desc || p.link).map(p=>{
+      const link = p.link ? `<div class="hint"><a href="${safeUrl(p.link)}" target="_blank">${escapeHtml(p.link)}</a></div>` : '';
+      return `<div class="item"><strong>${escapeHtml(p.title||'Untitled Project')}</strong><div>${escapeHtml(p.desc||'')}</div>${link}</div>`
+    }).join('');
+
+    // Education
+    const e = state.education;
+    const hasEdu = e.degree || e.inst || e.year || e.high;
+    $('#prevEdu').innerHTML = hasEdu ? `
+      <div><b>${escapeHtml(e.degree||'')}</b> — ${escapeHtml(e.inst||'')} (${escapeHtml(e.year||'')})<div class="hint">${escapeHtml(e.high||'')}</div></div>
+    ` : '';
+  }
+
+  // ===== UTILS =====
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+  function safeUrl(u){ try{ const _ = new URL(u, location.href); return _.href; }catch{ return '#'; } }
+
+  // ===== REVIEW BUTTON =====
+  $('#btnGoReview').addEventListener('click', ()=>{
+    // Switch to builder panel if not visible (after login)
+    if(panelLogin.style.display !== 'none'){ $('#btnLogin').click(); return; }
+    // Scroll preview into view
+    document.querySelector('.preview').scrollIntoView({behavior:'smooth', block:'start'});
+  });
+
+  // ===== SAVE / LOAD / RESET DRAFT =====
+  const STORAGE_KEY = 'portfolio-builder-draft-v1';
+  $('#btnSaveDraft').addEventListener('click', ()=>{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    toast('Draft saved locally ✅');
+  });
+  $('#btnLoadDraft').addEventListener('click', ()=>{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return toast('No draft found');
+    const data = JSON.parse(raw);
+    Object.assign(state, data);
+    // Repopulate inputs
+    for(const [key,val] of Object.entries(state.profile)){
+      const map = {name:'#name',role:'#role',about:'#about',email:'#email',phone:'#phone',location:'#location',website:'#website',github:'#github',linkedin:'#linkedin'};
+      if(map[key]) $(map[key]).value = val;
+    }
+    $('#skills').value = state.skills.join(', ');
+    state.projects.forEach((p,i)=>{
+      $(`#p${i+1}_title`).value = p.title||'';
+      $(`#p${i+1}_desc`).value = p.desc||'';
+      $(`#p${i+1}_link`).value = p.link||'';
+    });
+    $('#edu_degree').value = state.education.degree||'';
+    $('#edu_inst').value = state.education.inst||'';
+    $('#edu_year').value = state.education.year||'';
+    $('#edu_high').value = state.education.high||'';
+
+    // Theme inputs
+    $('#theme_brand').value = state.theme.brand;
+    $('#theme_accent').value = state.theme.accent;
+    $('#theme_card').value = state.theme.card;
+    $('#theme_text').value = state.theme.text;
+    $('#theme_muted').value = state.theme.muted;
+    $('#theme_bg').value = state.theme.bg;
+
+    applyTheme();
+    render();
+    toast('Draft loaded 📥');
+  });
+  $('#btnReset').addEventListener('click', ()=>{
+    if(!confirm('Clear the form and preview?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  });
+
+  function toast(t){
+    const el = document.createElement('div');
+    el.textContent = t;
+    el.style.cssText = 'position:fixed;right:14px;bottom:14px;background:#0e1728;border:1px solid #2a3a5c;padding:10px 12px;border-radius:12px;box-shadow:var(--shadow);opacity:0;transition:.2s';
+    document.body.appendChild(el);
+    requestAnimationFrame(()=>{el.style.opacity='1'});
+    setTimeout(()=>{el.style.opacity='0'; setTimeout(()=>el.remove(),200);}, 1600);
+  }
+
+  // ===== DOWNLOAD: Generate a standalone HTML portfolio =====
+  $('#btnDownload').addEventListener('click', ()=>{
+    const file = buildPortfolioHtml(state);
+    const blob = new Blob([file], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = (state.profile.name||'my-portfolio').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    a.href = url; a.download = `${safeName || 'portfolio'}.html`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+  });
+
+  function buildPortfolioHtml(s){
+    const links = [];
+    if(s.profile.email) links.push(`<a class="pill" href="mailto:${encodeURIComponent(s.profile.email)}">✉️ ${escapeHtml(s.profile.email)}</a>`);
+    if(s.profile.phone) links.push(`<span class="pill">📞 ${escapeHtml(s.profile.phone)}</span>`);
+    if(s.profile.location) links.push(`<span class="pill">📍 ${escapeHtml(s.profile.location)}</span>`);
+    if(s.profile.website) links.push(`<a class="pill" href="${safeUrl(s.profile.website)}" target="_blank">🔗 Website</a>`);
+    if(s.profile.github) links.push(`<a class="pill" href="${safeUrl(s.profile.github)}" target="_blank">🐙 GitHub</a>`);
+    if(s.profile.linkedin) links.push(`<a class="pill" href="${safeUrl(s.profile.linkedin)}" target="_blank">💼 LinkedIn</a>`);
+
+    const projHtml = s.projects.filter(p=>p.title || p.desc || p.link).map(p=>{
+      const link = p.link ? `<div class="hint"><a href="${safeUrl(p.link)}" target="_blank">${escapeHtml(p.link)}</a></div>` : '';
+      return `<div class="item"><strong>${escapeHtml(p.title||'Untitled Project')}</strong><div>${escapeHtml(p.desc||'')}</div>${link}</div>`
+    }).join('');
+
+    const edu = s.education;
+    const eduHtml = (edu.degree || edu.inst || edu.year || edu.high)
+      ? `<div><b>${escapeHtml(edu.degree||'')}</b> — ${escapeHtml(edu.inst||'')} (${escapeHtml(edu.year||'')})<div class="hint">${escapeHtml(edu.high||'')}</div></div>`
+      : '';
+
+    // Standalone HTML (no external deps). You can edit styles below.
+    return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(s.profile.name||'Portfolio')}</title>
+<style>
+:root{--pbg:${s.theme.bg};--pcard:${s.theme.card};--ptext:${s.theme.text};--phint:${s.theme.muted};--pbrand:${s.theme.brand};--pacc:${s.theme.accent};--radius:16px}
+*{box-sizing:border-box}body{margin:0;background:var(--pbg);color:var(--ptext);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+.wrap{max-width:1000px;margin:auto;padding:18px}
+.header{display:flex;gap:16px;align-items:center;background:linear-gradient(180deg, rgba(106,169,255,.10), transparent);border:1px solid #23365d;border-radius:var(--radius);padding:18px}
+img.pfp{width:92px;height:92px;border-radius:14px;object-fit:cover;border:2px solid rgba(255,255,255,.12)}
+h1{margin:0} .sub{color:var(--phint)}
+.card{background:var(--pcard);border:1px solid #1b2740;border-radius:var(--radius);padding:16px;margin-top:16px}
+.tag{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid #22345c;margin:4px 6px 0 0;font-size:13px;color:#c7d6f6}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid #2a3a5c;border-radius:999px;color:#c7d6f6;margin:4px 6px 0 0;text-decoration:none}
+.hint{color:var(--phint);font-size:13px}
+.item{padding:12px;border:1px solid #22345c;border-radius:12px;margin-top:10px}
+a{color:var(--pbrand)}
+footer{opacity:.7;margin:20px 0}
+</style></head>
+<body>
+  <div class="wrap">
+    <section class="header">
+      ${s.profile.photoDataUrl ? `<img class="pfp" alt="Profile" src="${s.profile.photoDataUrl}">` : ''}
+      <div>
+        <h1>${escapeHtml(s.profile.name||'Your Name')}</h1>
+        <div class="sub">${escapeHtml(s.profile.role||'Your Role')}</div>
+        <p>${escapeHtml(s.profile.about||'')}</p>
+        <div>${links.join(' ')}</div>
+      </div>
+    </section>
+
+    ${s.skills.length? `<section class="card"><h3>Skills</h3>${s.skills.map(k=>`<span class="tag">${escapeHtml(k)}</span>`).join('')}</section>`:''}
+
+    ${projHtml? `<section class="card"><h3>Projects</h3>${projHtml}</section>`:''}
+
+    ${eduHtml? `<section class="card"><h3>Education</h3>${eduHtml}</section>`:''}
+
+    <footer class="hint">Generated by your single-file Portfolio Builder. Edit this file anytime — it's plain HTML.</footer>
+  </div>
+</body></html>`;
+  }
+
+  // Initial paint
+  applyTheme();
+  render();
+</script>
+</body>
+</html>
